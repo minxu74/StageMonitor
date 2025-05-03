@@ -1,0 +1,13 @@
+[project]
+name = "stage-monitor"
+version = "0.0.1"
+description = "fastapi to monitor the staged indexes"
+authors = [{ name = "Min Xu", email = "min.mxu@gmail.com" }]
+dependencies = [
+    "requests>=2.32.0",
+    "fastapi>=0.115.12",
+]
+
+[build-system]
+requires = ["setuptools>=80.0.0"]
+build-backend = "setuptools.build_meta"

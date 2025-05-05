@@ -3,11 +3,25 @@ name = "stage-monitor"
 version = "0.0.1"
 description = "fastapi to monitor the staged indexes"
 authors = [{ name = "Min Xu", email = "min.mxu@gmail.com" }]
+requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+]
+
+
 dependencies = [
     "requests>=2.32.0",
-    "fastapi>=0.115.12",
+    "fastapi[standard]>=0.115.12",
+    "pydantic>2.11.0",
 ]
 
 [build-system]
 requires = ["setuptools>=80.0.0"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["backend"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["backend"]
+

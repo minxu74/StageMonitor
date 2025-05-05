@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JSON Data Viewer</title>
+    <title>ESGF-1.5 Index Monitoring</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/tabulator-tables@5.4.3/dist/css/tabulator.min.css" rel="stylesheet">
     <style>
@@ -27,7 +27,7 @@
 </head>
 <body>
     <div class="container py-4">
-        <h1>JSON Data Viewer</h1>
+        <h1>ESGF-1.5 Indexes</h1>
         
         <div class="d-flex justify-content-between align-items-center mb-3">
             <div class="last-update" id="lastUpdate">Last update: Never</div>
@@ -39,20 +39,39 @@
 
         <ul class="nav nav-tabs" id="dataTabs">
             <li class="nav-item">
-                <a class="nav-link active" data-bs-toggle="tab" href="#currentData">Current Data</a>
+                <a class="nav-link active" data-bs-toggle="tab" href="#publicData">Public</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-bs-toggle="tab" href="#historicalData">History</a>
+                <a class="nav-link" data-bs-toggle="tab" href="#cmip6plusData">CMIP6Plus</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#drcdpData">DRCDP</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#e3smData">e3sm</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#input4mipsData">input4MIPs</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#obs4mipsData">obs4MIPs</a>
             </li>
         </ul>
 
         <div class="tab-content">
-            <div class="tab-pane fade show active" id="currentData">
+            <div class="tab-pane fade show active" id="publicData">
                 <div id="loadingIndicator" class="text-center py-4">
                     <div class="spinner-border text-primary" role="status"></div>
                     <p>Loading data...</p>
                 </div>
                 <div id="currentDataTable"></div>
+            </div>
+            <div class="tab-pane fade show active" id="obs4mipsData">
+                <div id="loadingIndicator" class="text-center py-4 d-none">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p>Loading data...</p>
+                </div>
+                <div id="obs4mipsDataTable"></div>
             </div>
             <div class="tab-pane fade" id="historicalData">
                 <div id="historyTable"></div>
@@ -61,21 +80,47 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/tabulator-tables@5.4.3/dist/js/tabulator.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tabulator-tables@6.3.1/dist/js/tabulator.min.js"></script>
     <script>
         // Initialize tables
         const currentTable = new Tabulator("#currentDataTable", {
             layout: "fitColumns",
             placeholder: "No data available",
+            groupBy: "data_node",
             columns: [
-                {title: "Key", field: "key", headerFilter: true},
-                {title: "Value", field: "value", headerFilter: true}
+                {title: "timestamp", field: "timestamp", width:160},
+                {title: "total", field: "total_items"},
+                {title: "CMIP6", field: "CMIP6"},
+                {title: "CMIP5", field: "CMIP5"},
+                {title: "CMIP3", field: "CMIP3"},
+                {title: "e3sm-supplement", field: "e3sm_supplement"},
+                {title: "CMIP6Plus", field: "CMIP6Plus"},
+                {title: "DRCDP", field: "DRCDP"},
+                {title: "e3sm", field: "e3sm"},
+                {title: "input4MIPs", field: "input4MIPs"},
+                {title: "obs4MIPs", field: "obs4MIPs"}
             ]
+        });
+
+        const stageTable = new Tabulator("#obs4mipsDataTable", {
+            layout: "fitColumns",
+            placeholder: "No data available",
+            autoColumns:true,
+            autoColumnsDefinitions:[
+                {field:"id", visible:false}, //add header filters to the age column
+                {field:"data_node", visible:false}, //add header filters to the age column
+            ],
+            //-columns: [
+            //-    {title: "timestamp", field: "timestamp", width:160},
+            //-    {title: "total", field: "total_items"},
+            //-]
+
         });
 
         const historyTable = new Tabulator("#historyTable", {
             layout: "fitColumns",
             placeholder: "No historical data available",
+       
             columns: [
                 {title: "ID", field: "id", width: 80},
                 {title: "Timestamp", field: "timestamp", headerFilter: true},
@@ -84,22 +129,70 @@
         });
 
         // Helper function to flatten JSON for table display
-        function flattenData(data) {
-            return Object.entries(data).map(([key, value]) => ({
-                key,
-                value: typeof value === 'object' ? JSON.stringify(value, null, 2) : value
-            }));
-        }
+        //function flattenData(data) {
+        //    return Object.entries(data).map(([key, value]) => ({
+        //        data_node: key,
+        //        total: value["total_items"],
+        //        cmip6: value["projects"]["CMIP6"], 
+        //        cmip5: value["projects"]["CMIP5"], 
+        //        cmip3: value["projects"]["CMIP3"], 
+        //        e3sm_supplement: value["projects"]["e3sm-supplement"],
+        //        cmip6plus: value["projects"]["CMIP6Plus"],
+        //        drcdp: value["projects"]["DRCDP"],
+        //        e3sm: value["projects"]["e3sm"],
+        //        input4mips: value["projects"]["e3sm-supplement"],
+        //        obs4mips: value["projects"]["obs4MIPs"],
+        //    }));
+        //}
+
+
+        const flattenData = (dataArray) => {
+            const result = [];
+            
+            dataArray.forEach(item => {
+              Object.entries(item.data).forEach(([data_node, nodeData]) => {
+                const flattened = {
+                  timestamp: item.timestamp,
+                  id: item.id,
+                  data_node: data_node,
+                  total_items: nodeData.total_items
+                };
+                
+                // Add all project counts for this node
+                if ("projects" in nodeData) {
+                    Object.entries(nodeData.projects).forEach(([project, count]) => {
+                      flattened[project] = count;
+                    });
+                };
+                if ("institution_id" in nodeData) {
+                    Object.entries(nodeData.institution_id).forEach(([institute, count]) => {
+
+                      flattened[institute] = count;
+                    });
+                };
+                
+                result.push(flattened);
+              });
+            });
+            
+            return result;
+        };
 
         // Fetch and display current data
-        async function loadCurrentData() {
+        async function loadCurrentData(indexName) {
             try {
                 document.getElementById('loadingIndicator').classList.remove('d-none');
-                const response = await fetch('/api/data');
+                const response = await fetch('/api/' + indexName)
                 if (!response.ok) throw new Error(await response.text());
                 
                 const data = await response.json();
-                currentTable.replaceData(flattenData(data.data));
+              
+                if (indexName == "public") {
+                    currentTable.replaceData(flattenData(data.data));
+                } else {
+                    //stageTable.replaceData(flattenData(data.data));
+                    stageTable.setData(flattenData(data.data));
+                }
                 document.getElementById('lastUpdate').textContent = 
                     `Last update: ${new Date(data.last_update).toLocaleString()}`;
             } catch (error) {
@@ -129,7 +222,8 @@
                 spinner.classList.remove('d-none');
                 const response = await fetch('/api/refresh', {method: 'POST'});
                 if (!response.ok) throw new Error(await response.text());
-                await loadCurrentData();
+                await loadCurrentData("public");
+                await loadCurrentData("obs4MIPs");
             } catch (error) {
                 console.error("Refresh failed:", error);
                 alert("Refresh failed: " + error.message);
@@ -146,7 +240,8 @@
         });
 
         // Initial load
-        loadCurrentData();
+        loadCurrentData("public");
+        loadCurrentData("obs4MIPs");
     </script>
 </body>
 </html>

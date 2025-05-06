@@ -48,7 +48,11 @@ def facet_query(*,
                 },
             ]
         }
+
+
         response = sc.post_search(_globus_index_id, SearchQueryV1(**node_query))
+
+        print (SearchQueryV1(**node_query))
 
         target_nodes = []
         if "facet_results" in response:
@@ -96,15 +100,25 @@ def facet_query(*,
 
     else:
 
+        type_not = {
+            "type": "not",
+            "filter": {
+                "type": "match_all",
+                "field_name": "project",
+                "values": [project_enum.value],
+            }
+        }
+
+        type_in = {
+            "type": "match_all",
+            "field_name": "project",
+            "values": [project_enum.value],
+        }
+
         institution_query = {
             "q": "*",
             "limit": 0,  # Only want facets
             "filters": [
-                {
-                    "type": "match_all",
-                    "field_name": "project",
-                    "values": [project_enum.value],
-                },
             ],
             "facets": [
                 {
@@ -115,16 +129,29 @@ def facet_query(*,
                 },
             ],
         }
-        result = sc.post_search(_globus_index_id, SearchQueryV1(**institution_query))
 
-        results[project_enum.value] = {
-            "total_items": result["total"],
-            "institution_id": {},
-        }
+        results["index"] = sc.get_index(_globus_index_id).data
 
-        if "facet_results" in result:
-            for bucket in result["facet_results"][0]["buckets"]:
-                results[project_enum.value]["institution_id"][bucket["value"]] = bucket["count"]
+        for filter in [type_not, type_in]:
+            institution_query["filters"] = [filter]
+
+            result = sc.post_search(_globus_index_id, SearchQueryV1(**institution_query))
+
+            print (SearchQueryV1(**institution_query))
+
+            if filter == type_not: 
+                name = f"not_{project_enum.value}"
+            else:
+                name = project_enum.value
+
+            results[name] = {
+                "total_items": result["total"],
+                "institution_id": {},
+            }
+
+            if "facet_results" in result:
+                for bucket in result["facet_results"][0]["buckets"]:
+                    results[name]["institution_id"][bucket["value"]] = bucket["count"]
 
 
         print (results)

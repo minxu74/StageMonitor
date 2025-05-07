@@ -11,7 +11,11 @@ from typing import Optional, Any
 from pydantic import BaseModel
 import requests
 
+from facet_query import facet_query
+
 #from metadata_migrate_sync.app import 
+
+indexes = ["public", "obs4MIPs", "input4MIPs"]
 
 def query_json_data(index_name: str) -> dict[Any, Any]:
 
@@ -19,53 +23,55 @@ def query_json_data(index_name: str) -> dict[Any, Any]:
 
     #return r.json()
     if index_name == "public":
-        return {'esgf-node.ornl.gov': {
-                    'total_items': 34960355, 
-                    'projects': {
-                         'CMIP6': 32807528, 'CMIP5': 2036503, 'CMIP3': 111503, 'e3sm-supplement': 3225, 'input4MIPs': 1444, 'obs4MIPs': 152
-                    }
-                }, 
-                'eagle.alcf.anl.gov': {
-                    'total_items': 30967797, 
-                    'projects': {
-                        'CMIP6': 28822831, 'CMIP5': 2018420, 'CMIP3': 111503, 'input4MIPs': 14896, 'obs4MIPs': 147
-                    }
-                }, 
-                'aims3.llnl.gov': {
-                    'total_items': 4170883, 
-                    'projects': {
-                        'CMIP5': 2036503, 'CMIP6': 2005809, 'CMIP3': 111503, 'input4MIPs': 13805, 'e3sm-supplement': 3225, 'obs4MIPs': 38 
-                     }
-                }, 
-                'esgf-data1.llnl.gov': {
-                    'total_items': 32660846, 
-                    'projects': {'CMIP6': 32660834, 'obs4MIPs': 12
-                    }
-                }, 
-                'esgf-data2.llnl.gov': {
-                    'total_items': 266379, 
-                    'projects': {'CMIP6': 253187, 'input4MIPs': 6701, 'DRCDP': 5727, 'obs4MIPs': 746, 'CMIP6Plus': 18
-                    }
-                }
-               }
+        return facet_query(ep_name="public", project = "CMIP6")
+        #-return {'esgf-node.ornl.gov': {
+        #-            'total_items': 34960355, 
+        #-            'projects': {
+        #-                 'CMIP6': 32807528, 'CMIP5': 2036503, 'CMIP3': 111503, 'e3sm-supplement': 3225, 'input4MIPs': 1444, 'obs4MIPs': 152
+        #-            }
+        #-        }, 
+        #-        'eagle.alcf.anl.gov': {
+        #-            'total_items': 30967797, 
+        #-            'projects': {
+        #-                'CMIP6': 28822831, 'CMIP5': 2018420, 'CMIP3': 111503, 'input4MIPs': 14896, 'obs4MIPs': 147
+        #-            }
+        #-        }, 
+        #-        'aims3.llnl.gov': {
+        #-            'total_items': 4170883, 
+        #-            'projects': {
+        #-                'CMIP5': 2036503, 'CMIP6': 2005809, 'CMIP3': 111503, 'input4MIPs': 13805, 'e3sm-supplement': 3225, 'obs4MIPs': 38 
+        #-             }
+        #-        }, 
+        #-        'esgf-data1.llnl.gov': {
+        #-            'total_items': 32660846, 
+        #-            'projects': {'CMIP6': 32660834, 'obs4MIPs': 12
+        #-            }
+        #-        }, 
+        #-        'esgf-data2.llnl.gov': {
+        #-            'total_items': 266379, 
+        #-            'projects': {'CMIP6': 253187, 'input4MIPs': 6701, 'DRCDP': 5727, 'obs4MIPs': 746, 'CMIP6Plus': 18
+        #-            }
+        #-        }
+        #-       }
 
     else:
-        return {
-            'obs4MIPs': {
-                 'total_items': 1397, 
-                 'institution_id': {
-                      'NASA-GSFC': 367, 
-                      'ECMWF': 360, 
-                      'NASA-JPL': 120, 
-                      'NASA-LaRC': 88, 
-                      'ESSO': 22, 
-                      'RSS': 22, 
-                      'CNES': 6, 
-                      'NOAA-ESRL-PSD': 6, 
-                      'MOHC': 2
-                 }
-            }
-        }
+        #-return {
+        #-    'obs4MIPs': {
+        #-         'total_items': 1397, 
+        #-         'institution_id': {
+        #-              'NASA-GSFC': 367, 
+        #-              'ECMWF': 360, 
+        #-              'NASA-JPL': 120, 
+        #-              'NASA-LaRC': 88, 
+        #-              'ESSO': 22, 
+        #-              'RSS': 22, 
+        #-              'CNES': 6, 
+        #-              'NOAA-ESRL-PSD': 6, 
+        #-              'MOHC': 2
+        #-         }
+        #-    }
+        #-}
+        return facet_query(ep_name="stage", project = index_name)
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -131,7 +137,7 @@ def update_data_periodically():
     global cached_data, last_update_time
     while True:
         try:
-            for index_name in ["public", "obs4MIPs"]:
+            for index_name in indexes:
                 new_data = query_json_data(index_name)
                 last_update_time = datetime.now().isoformat()
                 store_data(index_name, new_data)
@@ -152,7 +158,7 @@ def startup_event():
         global cached_data, last_update_time
 
         cached_data = {}
-        for index_name in ["public", "obs4MIPs"]:
+        for index_name in indexes:
             new_data = query_json_data(index_name)
             last_update_time = datetime.now().isoformat()
             store_data(index_name, new_data)
@@ -185,7 +191,7 @@ async def refresh_data():
     """Manual refresh endpoint"""
     try:
         global cached_data, last_update_time
-        for index_name in ["public", "obs4MIPs"]:
+        for index_name in indexes:
             new_data = query_json_data(index_name)
             last_update_time = datetime.now().isoformat()
             store_data(index_name, new_data)

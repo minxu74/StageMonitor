@@ -160,4 +160,4 @@ def facet_query(*,
 if __name__ == "__main__":
 
     #facet_query(ep_name="public", project = "CMIP6")
-    facet_query(ep_name="stage", project = "obs4MIPs")
+    facet_query(ep_name="stage", project = "input4MIPs")

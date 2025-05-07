@@ -66,11 +66,22 @@
                 </div>
                 <div id="currentDataTable"></div>
             </div>
+            <div class="tab-pane fade show active" id="input4mipsData">
+                <div id="loadingIndicator" class="text-center py-4 d-none">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p>Loading data...</p>
+                </div>
+                <div id="input4mipsDataTable"></div>
+            </div>
             <div class="tab-pane fade show active" id="obs4mipsData">
                 <div id="loadingIndicator" class="text-center py-4 d-none">
                     <div class="spinner-border text-primary" role="status"></div>
                     <p>Loading data...</p>
                 </div>
+
+                <div id="obs4mipsIndexTable"></div>
+
+                <hr>
                 <div id="obs4mipsDataTable"></div>
             </div>
             <div class="tab-pane fade" id="historicalData">
@@ -83,10 +94,14 @@
     <script src="https://cdn.jsdelivr.net/npm/tabulator-tables@6.3.1/dist/js/tabulator.min.js"></script>
     <script>
         // Initialize tables
+        var stageTable = new Object();
+        var indexTable = new Object();
         const currentTable = new Tabulator("#currentDataTable", {
             layout: "fitColumns",
             placeholder: "No data available",
             groupBy: "data_node",
+            pagination:true,
+            paginationSize:15,
             columns: [
                 {title: "timestamp", field: "timestamp", width:160},
                 {title: "total", field: "total_items"},
@@ -101,21 +116,36 @@
                 {title: "obs4MIPs", field: "obs4MIPs"}
             ]
         });
+        const MIPs = ["input4mips", "obs4mips"];
+        for (const mip of MIPs) {
 
-        const stageTable = new Tabulator("#obs4mipsDataTable", {
-            layout: "fitColumns",
-            placeholder: "No data available",
-            autoColumns:true,
-            autoColumnsDefinitions:[
-                {field:"id", visible:false}, //add header filters to the age column
-                {field:"data_node", visible:false}, //add header filters to the age column
-            ],
-            //-columns: [
-            //-    {title: "timestamp", field: "timestamp", width:160},
-            //-    {title: "total", field: "total_items"},
-            //-]
+            indexTable[mip] = new Tabulator(`#${mip}IndexTable`, {
+                layout: "fitColumns",
+                placeholder: "No data available",
+                columns: [
 
-        });
+                    {title: "Timestamp", field: "timestamp"},
+                    {title: "index", field: "id"},
+                    {title: "capacity", field: "max_size_in_mb"},
+                    {title: "used", field: "size_in_mb"},
+                    {title: "subjects", field: "num_subjects"},
+                   
+                ],
+            });
+
+
+
+            stageTable[mip] = new Tabulator(`#${mip}DataTable`, {
+                layout: "fitColumns",
+                placeholder: "No data available",
+                autoColumns: "full",
+                groupBy: "data_node",
+                autoColumnsDefinitions:[
+                    {field:"id", visible:false}, //add header filters to the age column
+                    {field:"data_node", visible:false}, //add header filters to the age column
+                ],
+            });
+        }
 
         const historyTable = new Tabulator("#historyTable", {
             layout: "fitColumns",
@@ -128,29 +158,21 @@
             ]
         });
 
-        // Helper function to flatten JSON for table display
-        //function flattenData(data) {
-        //    return Object.entries(data).map(([key, value]) => ({
-        //        data_node: key,
-        //        total: value["total_items"],
-        //        cmip6: value["projects"]["CMIP6"], 
-        //        cmip5: value["projects"]["CMIP5"], 
-        //        cmip3: value["projects"]["CMIP3"], 
-        //        e3sm_supplement: value["projects"]["e3sm-supplement"],
-        //        cmip6plus: value["projects"]["CMIP6Plus"],
-        //        drcdp: value["projects"]["DRCDP"],
-        //        e3sm: value["projects"]["e3sm"],
-        //        input4mips: value["projects"]["e3sm-supplement"],
-        //        obs4mips: value["projects"]["obs4MIPs"],
-        //    }));
-        //}
-
-
-        const flattenData = (dataArray) => {
+        const flattenData = (dataArray, isIndex) => {
             const result = [];
             
             dataArray.forEach(item => {
               Object.entries(item.data).forEach(([data_node, nodeData]) => {
+
+                if (isIndex) {
+                    if (data_node == "index") {
+                        result.push(Object.assign({}, nodeData, { timestamp: item.timestamp }));
+                    }
+                    return;
+                }
+                if (data_node == "index") {
+                    return;
+                }
                 const flattened = {
                   timestamp: item.timestamp,
                   id: item.id,
@@ -188,10 +210,15 @@
                 const data = await response.json();
               
                 if (indexName == "public") {
-                    currentTable.replaceData(flattenData(data.data));
+                    currentTable.replaceData(flattenData(data.data, false));
                 } else {
                     //stageTable.replaceData(flattenData(data.data));
-                    stageTable.setData(flattenData(data.data));
+
+                    console.log(indexName, flattenData(data.data, true));
+                    console.log(stageTable);
+                    
+                    indexTable[indexName.toLowerCase()].setData(flattenData(data.data, true));
+                    stageTable[indexName.toLowerCase()].setData(flattenData(data.data, false));
                 }
                 document.getElementById('lastUpdate').textContent = 
                     `Last update: ${new Date(data.last_update).toLocaleString()}`;
@@ -223,6 +250,7 @@
                 const response = await fetch('/api/refresh', {method: 'POST'});
                 if (!response.ok) throw new Error(await response.text());
                 await loadCurrentData("public");
+                await loadCurrentData("input4MIPs");
                 await loadCurrentData("obs4MIPs");
             } catch (error) {
                 console.error("Refresh failed:", error);
@@ -241,6 +269,7 @@
 
         // Initial load
         loadCurrentData("public");
+        loadCurrentData("input4MIPs");
         loadCurrentData("obs4MIPs");
     </script>
 </body>

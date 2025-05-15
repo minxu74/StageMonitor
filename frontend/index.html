@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ESGF-1.5 Index Monitoring</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/tabulator-tables@5.4.3/dist/css/tabulator.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/tabulator-tables@6.3.1/dist/css/tabulator.min.css" rel="stylesheet">
     <style>
         .tab-content {
             padding: 20px;
@@ -59,6 +59,7 @@
         </ul>
 
         <div class="tab-content">
+
             <div class="tab-pane fade show active" id="publicData">
                 <div id="loadingIndicator" class="text-center py-4">
                     <div class="spinner-border text-primary" role="status"></div>
@@ -66,21 +67,58 @@
                 </div>
                 <div id="currentDataTable"></div>
             </div>
-            <div class="tab-pane fade show active" id="input4mipsData">
+
+            <div class="tab-pane fade show" id="cmip6plusData">
                 <div id="loadingIndicator" class="text-center py-4 d-none">
                     <div class="spinner-border text-primary" role="status"></div>
                     <p>Loading data...</p>
                 </div>
+
+                <div id="cmip6plusIndexTable"></div>
+                <hr>
+                <div id="cmip6plusDataTable"></div>
+            </div>
+
+            <div class="tab-pane fade show" id="drcdpData">
+                <div id="loadingIndicator" class="text-center py-4 d-none">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p>Loading data...</p>
+                </div>
+
+                <div id="drcdpIndexTable"></div>
+                <hr>
+                <div id="drcdpDataTable"></div>
+            </div>
+
+            <div class="tab-pane fade show" id="e3smData">
+                <div id="loadingIndicator" class="text-center py-4 d-none">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p>Loading data...</p>
+                </div>
+
+                <div id="e3smIndexTable"></div>
+                <hr>
+                <div id="e3smDataTable"></div>
+            </div>
+
+            <div class="tab-pane fade show" id="input4mipsData">
+                <div id="loadingIndicator" class="text-center py-4 d-none">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p>Loading data...</p>
+                </div>
+
+                <div id="input4mipsIndexTable"></div>
+                <hr>
                 <div id="input4mipsDataTable"></div>
             </div>
-            <div class="tab-pane fade show active" id="obs4mipsData">
+
+            <div class="tab-pane fade show" id="obs4mipsData">
                 <div id="loadingIndicator" class="text-center py-4 d-none">
                     <div class="spinner-border text-primary" role="status"></div>
                     <p>Loading data...</p>
                 </div>
 
                 <div id="obs4mipsIndexTable"></div>
-
                 <hr>
                 <div id="obs4mipsDataTable"></div>
             </div>
@@ -102,6 +140,14 @@
             groupBy: "data_node",
             pagination:true,
             paginationSize:15,
+            columnDefaults:{
+                hozAlign:"center",
+                vertAlign:"middle",
+                headerHozAlign:"center",
+            },
+            groupHeader: function(value, count, data, group){
+                return value;
+            },
             columns: [
                 {title: "timestamp", field: "timestamp", width:160},
                 {title: "total", field: "total_items"},
@@ -116,12 +162,17 @@
                 {title: "obs4MIPs", field: "obs4MIPs"}
             ]
         });
-        const MIPs = ["input4mips", "obs4mips"];
+        const MIPs = ["cmip6plus", "drcdp", "e3sm", "input4mips", "obs4mips"];
         for (const mip of MIPs) {
 
             indexTable[mip] = new Tabulator(`#${mip}IndexTable`, {
-                layout: "fitColumns",
+                layout: "fitDataTable",
                 placeholder: "No data available",
+                columnDefaults:{
+                    hozAlign:"center",
+                    vertAlign:"middle",
+                    headerHozAlign:"center",
+                },
                 columns: [
 
                     {title: "Timestamp", field: "timestamp"},
@@ -136,10 +187,18 @@
 
 
             stageTable[mip] = new Tabulator(`#${mip}DataTable`, {
-                layout: "fitColumns",
+                layout: "fitData",
                 placeholder: "No data available",
+                columnDefaults:{
+                    hozAlign:"center",
+                    vertAlign:"middle",
+                    headerHozAlign:"center",
+                },
                 autoColumns: "full",
                 groupBy: "data_node",
+                groupHeader: function(value, count, data, group){
+                    return value;
+                },
                 autoColumnsDefinitions:[
                     {field:"id", visible:false}, //add header filters to the age column
                     {field:"data_node", visible:false}, //add header filters to the age column
@@ -250,6 +309,9 @@
                 const response = await fetch('/api/refresh', {method: 'POST'});
                 if (!response.ok) throw new Error(await response.text());
                 await loadCurrentData("public");
+                await loadCurrentData("CMIP6Plus");
+                await loadCurrentData("DRCDP");
+                await loadCurrentData("e3sm");
                 await loadCurrentData("input4MIPs");
                 await loadCurrentData("obs4MIPs");
             } catch (error) {
@@ -269,6 +331,9 @@
 
         // Initial load
         loadCurrentData("public");
+        loadCurrentData("CMIP6Plus");
+        loadCurrentData("DRCDP");
+        loadCurrentData("e3sm");
         loadCurrentData("input4MIPs");
         loadCurrentData("obs4MIPs");
     </script>

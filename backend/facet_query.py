@@ -52,8 +52,6 @@ def facet_query(*,
 
         response = sc.post_search(_globus_index_id, SearchQueryV1(**node_query))
 
-        print (SearchQueryV1(**node_query))
-
         target_nodes = []
         if "facet_results" in response:
             for bucket in response["facet_results"][0]["buckets"]:
@@ -154,10 +152,9 @@ def facet_query(*,
                     results[name]["institution_id"][bucket["value"]] = bucket["count"]
 
 
-        print (results)
         return results
 
 if __name__ == "__main__":
 
     #facet_query(ep_name="public", project = "CMIP6")
-    facet_query(ep_name="stage", project = "input4MIPs")
+    facet_query(ep_name="stage", project = "e3sm")

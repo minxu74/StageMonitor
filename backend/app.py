@@ -15,7 +15,7 @@ from facet_query import facet_query
 
 #from metadata_migrate_sync.app import 
 
-indexes = ["public", "obs4MIPs", "input4MIPs"]
+indexes = ["public", "CMIP6Plus", "DRCDP", "e3sm", "obs4MIPs", "input4MIPs"]
 
 def query_json_data(index_name: str) -> dict[Any, Any]:
 
@@ -145,7 +145,7 @@ def update_data_periodically():
             print(f"Data updated at {last_update_time}")
         except Exception as e:
             print(f"Error updating data: {e}")
-        time.sleep(3600)  # 1 hour
+        time.sleep(10800)  # 1 hour
 
 @app.on_event("startup")
 def startup_event():
@@ -163,6 +163,8 @@ def startup_event():
             last_update_time = datetime.now().isoformat()
             store_data(index_name, new_data)
             cached_data[index_name] = [{"data": new_data}]
+
+            print ('xxxx', index_name);
     except Exception as e:
         print(f"Initial data load failed: {e}")
 
